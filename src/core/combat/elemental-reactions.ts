@@ -1,0 +1,59 @@
+import type { Combatant } from '../types/combat.ts';
+import type { ElementType } from '../types/abilities.ts';
+
+export interface ElementalReactionResult {
+  hasReaction: boolean;
+  reactionName?: string;
+  bonusDamage: number;
+  logMessage?: string;
+  cleansedStatusId?: string;
+}
+
+export function checkElementalReaction(
+  defender: Combatant,
+  abilityElement: ElementType,
+  attackerMagicAttack: number
+): ElementalReactionResult {
+  const isFrozen = defender.statusEffects.some((s) => s.type === 'FROZEN');
+  const isBurning = defender.statusEffects.some((s) => s.type === 'BURNING');
+  const poisonEffect = defender.statusEffects.find((s) => s.type === 'POISON');
+  const isStunned = defender.statusEffects.some((s) => s.type === 'STUNNED');
+
+  // 1. THERMAL SHOCK: Fire vs Frozen OR Ice vs Burning
+  if ((isFrozen && abilityElement === 'FIRE') || (isBurning && abilityElement === 'ICE')) {
+    const bonusDmg = Math.round(attackerMagicAttack * 1.4) + 20;
+    return {
+      hasReaction: true,
+      reactionName: 'THERMAL_SHOCK',
+      bonusDamage: bonusDmg,
+      logMessage: `💥 [REACTION: THERMAL SHOCK]: Drastic temperature shift detonates for +${bonusDmg} Shatter damage!`,
+    };
+  }
+
+  // 2. VENOM COMBUSTION: Fire vs Poison
+  if (poisonEffect && abilityElement === 'FIRE') {
+    const bonusDmg = Math.round((poisonEffect.potency || 15) * 2.5);
+    return {
+      hasReaction: true,
+      reactionName: 'VENOM_COMBUSTION',
+      bonusDamage: bonusDmg,
+      logMessage: `💥 [REACTION: VENOM COMBUSTION]: Flames ignite lethal neurotoxins, exploding for +${bonusDmg} Toxic Fire damage!`,
+    };
+  }
+
+  // 3. OVERWHELM GUARD BREAK: Physical vs Stunned
+  if (isStunned && abilityElement === 'PHYSICAL') {
+    const bonusDmg = 25;
+    return {
+      hasReaction: true,
+      reactionName: 'GUARD_BREAK',
+      bonusDamage: bonusDmg,
+      logMessage: `💥 [REACTION: GUARD BREAK]: Direct strike crushes stunned posture for +${bonusDmg} True damage!`,
+    };
+  }
+
+  return {
+    hasReaction: false,
+    bonusDamage: 0,
+  };
+}

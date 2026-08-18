@@ -1,0 +1,156 @@
+/* ==========================================================================
+   Old School CRT Terminal Monitor & Phosphor Glow Simulation
+   ========================================================================== */
+
+/* Scanline and CRT screen container */
+.crt-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-color: #040608;
+  font-family: var(--font-body);
+  letter-spacing: 0.04em;
+}
+
+/* CRT Screen Effect active state with subtle organic screen flicker */
+.crt-active {
+  position: relative;
+  filter: contrast(1.15) brightness(1.12) saturate(1.2);
+  animation: crtSubtleFlicker 0.22s infinite ease-in-out;
+}
+
+/* CRT fine scanlines and RGB subpixel grill overlay with slow downward drift */
+.crt-active::before {
+  content: " ";
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: 
+    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%),
+    linear-gradient(90deg, rgba(255, 0, 0, 0.025), rgba(0, 255, 0, 0.015), rgba(0, 0, 255, 0.025));
+  z-index: 9998;
+  background-size: 100% 4px, 6px 100%;
+  pointer-events: none;
+  opacity: 0.92;
+  animation: scanlineDrift 75s linear infinite;
+}
+
+/* Curved CRT Bezel Glass Corner Vignette & Specular Highlight (Zero moving sweep bars) */
+.crt-active::after {
+  content: " ";
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: radial-gradient(circle at 50% 50%, transparent 82%, rgba(0, 0, 0, 0.22) 100%);
+  box-shadow: 
+    inset 0 0 30px rgba(0, 0, 0, 0.4),
+    inset 0 0 65px rgba(0, 0, 0, 0.6);
+}
+
+/* Warm Phosphor glow for headings and gold accents */
+.crt-active h1,
+.crt-active h2,
+.crt-active h3,
+.crt-active h4,
+.crt-active .text-glow {
+  text-shadow: 
+    0 0 2px rgba(252, 231, 154, 0.8),
+    0 0 8px rgba(212, 163, 75, 0.5),
+    0 0 16px rgba(212, 163, 75, 0.25);
+}
+
+.crt-active .rpg-panel {
+  box-shadow: 
+    0 0 14px rgba(0, 0, 0, 0.95),
+    0 0 5px rgba(212, 163, 75, 0.3),
+    inset 0 0 18px rgba(0, 0, 0, 0.5);
+  border-color: rgba(212, 163, 75, 0.45);
+}
+
+.crt-active .rpg-button {
+  text-shadow: 0 0 4px currentColor, 0 0 8px currentColor;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.9), 0 0 6px rgba(212, 163, 75, 0.35);
+}
+
+/* Terminal prompt blinking cursor */
+@keyframes termBlink {
+  0%, 49% {
+    opacity: 1;
+  }
+  50%, 100% {
+    opacity: 0;
+  }
+}
+
+.term-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 1.1em;
+  background-color: var(--text-term-green);
+  vertical-align: text-bottom;
+  animation: termBlink 1s infinite;
+  box-shadow: 0 0 8px var(--text-term-green);
+}
+
+/* Slowly moving fine scanlines */
+@keyframes scanlineDrift {
+  0% {
+    background-position: 0 0, 0 0;
+  }
+  100% {
+    background-position: 0 240px, 0 0;
+  }
+}
+
+/* Very subtle organic screen micro-flicker representing CRT phosphor refresh */
+@keyframes crtSubtleFlicker {
+  0% {
+    opacity: 0.99;
+    filter: contrast(1.15) brightness(1.115) saturate(1.2);
+  }
+  25% {
+    opacity: 1;
+    filter: contrast(1.15) brightness(1.125) saturate(1.2);
+  }
+  50% {
+    opacity: 0.988;
+    filter: contrast(1.145) brightness(1.12) saturate(1.19);
+  }
+  75% {
+    opacity: 0.995;
+    filter: contrast(1.15) brightness(1.13) saturate(1.2);
+  }
+  100% {
+    opacity: 0.99;
+    filter: contrast(1.15) brightness(1.12) saturate(1.2);
+  }
+}
+
+/* RGB Chromatic Aberration Glitch on impacts */
+@keyframes chromaticHit {
+  0% {
+    filter: none;
+  }
+  20% {
+    filter: drop-shadow(-3px 0px 0px rgba(239, 68, 68, 0.75)) drop-shadow(3px 0px 0px rgba(56, 189, 248, 0.75)) brightness(1.4);
+  }
+  60% {
+    filter: drop-shadow(-1px 0px 0px rgba(239, 68, 68, 0.4)) drop-shadow(1px 0px 0px rgba(56, 189, 248, 0.4));
+  }
+  100% {
+    filter: none;
+  }
+}
+
+.crt-active .animate-hit {
+  animation: hitShake 0.4s ease-out, chromaticHit 0.35s ease-out;
+}

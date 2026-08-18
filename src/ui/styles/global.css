@@ -1,0 +1,122 @@
+@import './theme.css';
+@import './animations.css';
+@import './crt.css';
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  width: 100%;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+button, a, input, select {
+  touch-action: manipulation;
+}
+
+/* Custom RPG Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-gold);
+}
+
+/* Heading Classes */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: 0.05em;
+  color: var(--text-gold);
+  text-transform: uppercase;
+}
+
+/* Glassmorphism RPG Panel */
+.rpg-panel {
+  background: linear-gradient(145deg, rgba(22, 27, 38, 0.92) 0%, rgba(17, 21, 29, 0.96) 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+  position: relative;
+}
+
+.rpg-panel-gold {
+  border: 1px solid var(--border-gold);
+  box-shadow: var(--shadow-gold);
+}
+
+.rpg-panel-gold::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 1px solid rgba(243, 195, 96, 0.2);
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+/* Button Global Dark Fantasy Terminal Theme Reset */
+button {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  outline: none;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--border-gold);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+input, select, textarea {
+  background-color: rgba(10, 14, 23, 0.9);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  outline: none;
+  border-radius: 3px;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--border-gold);
+  box-shadow: 0 0 8px rgba(212, 163, 75, 0.3);
+}

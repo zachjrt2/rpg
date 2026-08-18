@@ -1,0 +1,58 @@
+:root {
+  /* Color Palette - Dark Fantasy Terminal */
+  --bg-primary: #07090e;
+  --bg-secondary: #0d1117;
+  --bg-card: #121722;
+  --bg-card-hover: #1b2333;
+  --bg-surface: #161c28;
+  --bg-overlay: rgba(5, 7, 10, 0.9);
+
+  /* Borders & Accents */
+  --border-subtle: #232d3f;
+  --border-gold: #d4a34b;
+  --border-gold-glow: rgba(212, 163, 75, 0.5);
+  --border-gold-bright: #fce79a;
+  --border-green: #10b981;
+
+  /* Terminal Text Colors */
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-gold: #fde047;
+  --text-gold-light: #fef08a;
+  --text-term-green: #4ade80;
+  --text-term-cyan: #38bdf8;
+  --text-term-amber: #fbbf24;
+
+  /* RPG Resource / Theme Colors */
+  --hp-red: #ef4444;
+  --hp-red-dark: #7f1d1d;
+  --hp-red-glow: rgba(239, 68, 68, 0.5);
+
+  --mana-blue: #0ea5e9;
+  --mana-blue-dark: #075985;
+  --mana-blue-glow: rgba(14, 165, 233, 0.5);
+
+  --defense-green: #10b981;
+  --defense-green-glow: rgba(16, 185, 129, 0.5);
+
+  --crit-amber: #f59e0b;
+  --crit-amber-glow: rgba(245, 158, 11, 0.6);
+
+  --magic-purple: #a855f7;
+  --magic-purple-glow: rgba(168, 85, 247, 0.5);
+
+  /* Retro Terminal Typography */
+  --font-heading: 'Share Tech Mono', 'VT323', monospace;
+  --font-pixel: 'VT323', monospace;
+  --font-body: 'Share Tech Mono', 'JetBrains Mono', monospace;
+  --font-mono: 'JetBrains Mono', 'Share Tech Mono', monospace;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.8);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.9);
+  --shadow-gold: 0 0 15px rgba(212, 163, 75, 0.35);
+  --shadow-gold-heavy: 0 0 25px rgba(252, 231, 154, 0.5);
+  --shadow-terminal: 0 0 10px rgba(74, 222, 128, 0.3);
+}
