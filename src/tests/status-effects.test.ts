@@ -28,12 +28,47 @@ describe('Status Effects System', () => {
     expect(tick1.combatant.currentHp).toBe(initialHp - 10);
     expect(tick1.combatant.shieldHp).toBe(50); // Shield was pierced and remains 50!
     expect(tick1.combatant.statusEffects[0].potency).toBe(9);
-    expect(tick1.combatant.statusEffects[0].remainingTurns).toBe(4);
+    expect(tick1.combatant.statusEffects[0].remainingTurns).toBe(9);
 
     // Turn 2 tick: 9 poison damage, potency decays from 9 -> 8
     const tick2 = processTurnStartStatuses(tick1.combatant, 2);
     expect(tick2.combatant.currentHp).toBe(initialHp - 10 - 9);
     expect(tick2.combatant.statusEffects[0].potency).toBe(8);
+    expect(tick2.combatant.statusEffects[0].remainingTurns).toBe(8);
+  });
+
+  it('applies Bleeding effect, ticks physical damage, and decays potency by 1 per round until natural expiry', () => {
+    const hero = createWarriorHero();
+    const goblin = createGoblinScout();
+    const rng = new Mulberry32RNG(42);
+
+    // Apply 3 Bleed (e.g. duration 1 from ability/card, but potency is 3)
+    const applyResult = applyStatusEffect(
+      goblin,
+      { effectId: 'BLEEDING', chance: 1.0, duration: 1, potency: 3 },
+      hero,
+      rng
+    );
+
+    expect(applyResult.applied).toBe(true);
+    const initialHp = goblin.currentHp;
+
+    // Turn 1 tick: deals 3 bleed damage, decays to 2
+    const tick1 = processTurnStartStatuses(applyResult.target, 1);
+    expect(tick1.combatant.currentHp).toBe(initialHp - 3);
+    expect(tick1.combatant.statusEffects[0].potency).toBe(2);
+    expect(tick1.combatant.statusEffects[0].remainingTurns).toBe(2);
+
+    // Turn 2 tick: deals 2 bleed damage, decays to 1
+    const tick2 = processTurnStartStatuses(tick1.combatant, 2);
+    expect(tick2.combatant.currentHp).toBe(initialHp - 3 - 2);
+    expect(tick2.combatant.statusEffects[0].potency).toBe(1);
+    expect(tick2.combatant.statusEffects[0].remainingTurns).toBe(1);
+
+    // Turn 3 tick: deals 1 bleed damage, decays to 0 -> expires
+    const tick3 = processTurnStartStatuses(tick2.combatant, 3);
+    expect(tick3.combatant.currentHp).toBe(initialHp - 3 - 2 - 1);
+    expect(tick3.combatant.statusEffects.length).toBe(0);
   });
 
   it('heals with Regeneration each round and decays potency by 1 until expiry', () => {
@@ -113,5 +148,65 @@ describe('Status Effects System', () => {
     );
     expect(secondApply.target.statusEffects[0].potency).toBe(16);
     expect(secondApply.target.statusEffects[0].remainingTurns).toBe(16);
+  });
+
+  it('applies Burning effect, ticks fire damage, and decays potency by 1 per round until expiry', () => {
+    const hero = createWarriorHero();
+    const goblin = createGoblinScout();
+    const rng = new Mulberry32RNG(42);
+
+    const applyResult = applyStatusEffect(
+      goblin,
+      { effectId: 'BURNING', chance: 1.0, duration: 1, potency: 3 },
+      hero,
+      rng
+    );
+
+    expect(applyResult.applied).toBe(true);
+    const initialHp = goblin.currentHp;
+
+    // Turn 1 tick: 3 fire damage, decays to 2
+    const tick1 = processTurnStartStatuses(applyResult.target, 1);
+    expect(tick1.combatant.currentHp).toBe(initialHp - 3);
+    expect(tick1.combatant.statusEffects[0].potency).toBe(2);
+    expect(tick1.combatant.statusEffects[0].remainingTurns).toBe(2);
+
+    // Turn 2 tick: 2 fire damage, decays to 1
+    const tick2 = processTurnStartStatuses(tick1.combatant, 2);
+    expect(tick2.combatant.currentHp).toBe(initialHp - 3 - 2);
+    expect(tick2.combatant.statusEffects[0].potency).toBe(1);
+    expect(tick2.combatant.statusEffects[0].remainingTurns).toBe(1);
+
+    // Turn 3 tick: 1 fire damage, decays to 0 -> expires
+    const tick3 = processTurnStartStatuses(tick2.combatant, 3);
+    expect(tick3.combatant.currentHp).toBe(initialHp - 3 - 2 - 1);
+    expect(tick3.combatant.statusEffects.length).toBe(0);
+  });
+
+  it('applies Frozen for 2 turns, skips turns, and ticks down by 1 each round until thawed', () => {
+    const hero = createWarriorHero();
+    const goblin = createGoblinScout();
+    const rng = new Mulberry32RNG(42);
+
+    const applyResult = applyStatusEffect(
+      goblin,
+      { effectId: 'FROZEN', chance: 1.0, duration: 2, potency: 1 },
+      hero,
+      rng
+    );
+
+    expect(applyResult.applied).toBe(true);
+    expect(applyResult.target.statusEffects[0].remainingTurns).toBe(2);
+
+    // Turn 1: should skip turn, remaining turns ticks down to 1
+    const tick1 = processTurnStartStatuses(applyResult.target, 1);
+    expect(tick1.shouldSkipTurn).toBe(true);
+    expect(tick1.combatant.statusEffects[0].remainingTurns).toBe(1);
+    expect(tick1.combatant.statusEffects[0].potency).toBe(1);
+
+    // Turn 2: should skip turn, remaining turns ticks down to 0 -> expires
+    const tick2 = processTurnStartStatuses(tick1.combatant, 2);
+    expect(tick2.shouldSkipTurn).toBe(true);
+    expect(tick2.combatant.statusEffects.length).toBe(0); // Thawed!
   });
 });

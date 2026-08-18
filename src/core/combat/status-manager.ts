@@ -46,25 +46,32 @@ export function applyStatusEffect(
     const isStackingPotency = ['REGENERATION', 'POISON', 'BLEEDING', 'BURNING', 'THORNS', 'CORROSION'].includes(effectType);
 
     const newPotency = isStackingPotency ? existing.potency + potency : Math.max(existing.potency, potency);
-    const newRemainingTurns = effectType === 'REGENERATION'
-      ? Math.max(existing.remainingTurns, newPotency)
-      : Math.max(existing.remainingTurns, duration);
+    const isDecayingPotency = ['REGENERATION', 'POISON', 'BLEEDING', 'BURNING'].includes(effectType);
+    let newRemainingTurns: number;
+    if (isDecayingPotency) {
+      newRemainingTurns = Math.max(existing.remainingTurns, newPotency);
+    } else if (effectType === 'FROZEN' || effectType === 'STUNNED') {
+      newRemainingTurns = existing.remainingTurns + duration;
+    } else {
+      newRemainingTurns = Math.max(existing.remainingTurns, duration);
+    }
 
     updatedEffects[existingIndex] = {
       ...existing,
       remainingTurns: newRemainingTurns,
-      potency: newPotency,
+      potency: effectType === 'FROZEN' || effectType === 'STUNNED' ? newRemainingTurns : newPotency,
     };
   } else {
     // Add new status effect
-    const initialDuration = effectType === 'REGENERATION' ? Math.max(duration, potency) : duration;
+    const isDecayingPotency = ['REGENERATION', 'POISON', 'BLEEDING', 'BURNING'].includes(effectType);
+    const initialDuration = isDecayingPotency ? Math.max(duration, potency) : duration;
     const newEffect: ActiveStatusEffect = {
       id: `status-${Date.now()}-${statusCounter}`,
       type: effectType,
       name: effectType.charAt(0) + effectType.slice(1).toLowerCase(),
       duration: initialDuration,
       remainingTurns: initialDuration,
-      potency,
+      potency: effectType === 'FROZEN' || effectType === 'STUNNED' ? initialDuration : potency,
       sourceId: source.id,
       sourceName: source.name,
     };
@@ -241,18 +248,41 @@ export function processTurnStartStatuses(
       );
     }
 
-    // Decrement duration and decay potency for Poison & Regeneration
+    // Decrement duration and decay potency for Poison, Bleeding, Burning & Regeneration
     let turnsLeft = effect.remainingTurns - 1;
     let nextPotency = effect.potency;
 
-    if (effect.type === 'POISON' || effect.type === 'REGENERATION') {
+    if (
+      effect.type === 'POISON' ||
+      effect.type === 'BLEEDING' ||
+      effect.type === 'BURNING' ||
+      effect.type === 'REGENERATION'
+    ) {
       nextPotency = Math.max(0, effect.potency - 1);
-      if (nextPotency === 0) {
-        turnsLeft = 0;
-      }
+      turnsLeft = nextPotency;
+    } else if (effect.type === 'FROZEN' || effect.type === 'STUNNED') {
+      nextPotency = Math.max(0, turnsLeft);
     }
 
-    if (turnsLeft > 0 && nextPotency > 0) {
+    if (
+      turnsLeft > 0 &&
+      (nextPotency > 0 ||
+        [
+          'FROZEN',
+          'STUNNED',
+          'WEAKENED',
+          'VULNERABLE',
+          'SHOCKED',
+          'SILENCED',
+          'HASTE',
+          'SHIELDED',
+          'BLINDED',
+          'FORTIFIED',
+          'EMPOWERED',
+          'CORROSION',
+          'THORNS',
+        ].includes(effect.type))
+    ) {
       remainingEffects.push({ ...effect, potency: nextPotency, remainingTurns: turnsLeft });
     } else {
       logs.push(

@@ -22,7 +22,7 @@ export const StatusBadgeList: React.FC<StatusBadgeListProps> = ({ statusEffects,
           text: '#fed7aa',
           icon: <FireFlameSvg size={12} color="#f97316" />,
           label: 'BURN',
-          desc: `Burning: Takes ${potency || 6} Fire damage at the start of each turn.`,
+          desc: `Burning: Takes ${potency || 6} Fire damage at start of turn, decaying by 1 each round.`,
         };
       case 'POISON':
         return {
@@ -40,7 +40,7 @@ export const StatusBadgeList: React.FC<StatusBadgeListProps> = ({ statusEffects,
           text: '#fca5a5',
           icon: <BloodDropSvg size={12} color="#ef4444" />,
           label: 'BLEED',
-          desc: `Bleeding: Takes ${potency || 4} Physical damage whenever taking actions.`,
+          desc: `Bleeding: Takes ${potency || 4} Physical damage at start of turn, decaying by 1 each round.`,
         };
       case 'STUNNED':
         return {
@@ -58,7 +58,7 @@ export const StatusBadgeList: React.FC<StatusBadgeListProps> = ({ statusEffects,
           text: '#bae6fd',
           icon: <Snowflake size={12} color="#38bdf8" />,
           label: 'FROZEN',
-          desc: 'Frozen: Incapacitated. Takes +30% Lightning and Fire damage.',
+          desc: 'Frozen: Incapacitated (skips turn), decaying by 1 turn each round. Takes +30% Lightning and Fire damage.',
         };
       case 'WEAKENED':
         return {
@@ -219,7 +219,10 @@ export const StatusBadgeList: React.FC<StatusBadgeListProps> = ({ statusEffects,
       {statusEffects.map((effect) => {
         const details = getEffectDetails(effect.type, effect.potency);
         const isHovered = hoveredEffectId === effect.id;
-        const displayValue = effect.potency && effect.potency > 0 ? effect.potency : effect.remainingTurns;
+        const isPotencyType = ['BURNING', 'POISON', 'BLEEDING', 'REGENERATION', 'CORROSION', 'THORNS'].includes(effect.type);
+        const displayValue = isPotencyType
+          ? (effect.potency || effect.remainingTurns)
+          : effect.remainingTurns;
 
         return (
           <div
