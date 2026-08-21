@@ -36,6 +36,8 @@ export interface Combatant {
   abilityCooldowns: Record<string, number>; // abilityId -> remaining cooldown rounds
   statusEffects: ActiveStatusEffect[];
   shieldHp: number; // Temporary absorption shield
+  posture?: number; // Current stagger/posture meter
+  maxPosture?: number; // Max stagger/posture meter
   originBoon?: string; // Origin Boon ID chosen during character creation
 }
 
@@ -117,6 +119,7 @@ export interface DamageCalculationResult {
   wasDefended: boolean;
   isKilled: boolean;
   shieldAbsorbed?: number;
+  isGlancingBlow?: boolean;
 }
 
 export interface ActionExecutionResult {

@@ -4,6 +4,75 @@ import type { IRandomNumberGenerator } from '../rng/rng.ts';
 import { createLogEntry, createFloatingText } from './combat-events.ts';
 import { applyStatusEffect } from './status-manager.ts';
 
+type IntentStrategy = (enemy: Combatant, round: number, hpRatio: number, rng: IRandomNumberGenerator) => EnemyIntent | null;
+
+const INTENT_STRATEGIES: Record<string, IntentStrategy> = {
+  HEALER: (enemy, round, hpRatio) => {
+    if (hpRatio <= 0.6) {
+      return { type: 'HEAL', heal: Math.round(enemy.maxHp * 0.3), description: 'Chanting Primal Healing Salve (+30% HP)', icon: 'heart' };
+    }
+    const lightningDmg = Math.round(enemy.derivedStats.magicAttack * 1.4);
+    return { type: 'ATTACK', damage: lightningDmg, statusEffect: 'SHOCKED', description: `Calling Lightning Bolt: ${lightningDmg} Lightning dmg + Shocked`, icon: 'zap' };
+  },
+  ENRAGER: (enemy, round, hpRatio) => {
+    const isEmpowered = enemy.statusEffects.some((s) => s.type === 'EMPOWERED' && s.remainingTurns > 0);
+    if (hpRatio <= 0.65 && !isEmpowered) {
+      return { type: 'BUFF', description: 'Entering Blood Frenzy (+Empowered & Haste)', icon: 'flame' };
+    }
+    const frenzyDmg = Math.round(enemy.derivedStats.physicalAttack * (isEmpowered ? 1.6 : 1.25));
+    return { type: 'ATTACK', damage: Math.max(4, frenzyDmg), description: `Wild Frenzy Cleave: ${frenzyDmg} heavy physical damage`, icon: 'swords' };
+  },
+  PACK_LEADER: (enemy, round) => {
+    if (round % 3 === 1) {
+      return { type: 'BUFF', block: 20, description: `Bellowing Battle Cry: Grants +20 Block & Empowered`, icon: 'shield' };
+    }
+    const cleaveDmg = Math.round(enemy.derivedStats.physicalAttack * 1.6);
+    return { type: 'DEBUFF', damage: cleaveDmg, statusEffect: 'VULNERABLE', description: `Crushing Cleave: ${cleaveDmg} physical dmg + Vulnerable (+30% dmg taken)`, icon: 'swords' };
+  },
+  DEFENDER_FORTRESS: (enemy, round) => {
+    if (enemy.shieldHp <= 0 || round % 2 === 1) {
+      const blockVal = Math.round(enemy.derivedStats.physicalDefense * 1.5) + 15;
+      return { type: 'DEFEND', block: blockVal, description: `Hardening into Stone Form: +${blockVal} Block & Thorns`, icon: 'shield' };
+    }
+    const slamDmg = Math.round(enemy.derivedStats.physicalAttack * 1.5);
+    return { type: 'ATTACK', damage: slamDmg, description: `Earthshaking Heavy Slam: ${slamDmg} physical damage`, icon: 'sword' };
+  },
+  CROWD_CONTROLLER: (enemy, round) => {
+    if (round % 3 === 1) {
+      if (enemy.name.includes('Bandit') || enemy.name.includes('Shadow')) {
+        return { type: 'DEBUFF', statusEffect: 'BLINDED', damage: 5, description: 'Hurls Smoke Bomb: 5 dmg + Blinded (40% miss chance)', icon: 'sparkles' };
+      } else if (enemy.name.includes('Banshee') || enemy.name.includes('Specter')) {
+        return { type: 'DEBUFF', statusEffect: 'WEAKENED', damage: 8, description: 'Piercing Banshee Screech: 8 dmg + Weakened (-30% attack power)', icon: 'shadow' };
+      } else {
+        return { type: 'DEBUFF', statusEffect: 'POISON', damage: 6, description: 'Spitting Sticky Web: 6 dmg + 10 Poison + Weakened', icon: 'poison' };
+      }
+    }
+    const critStrikeDmg = Math.round(enemy.derivedStats.physicalAttack * 1.5);
+    return { type: 'ATTACK', damage: critStrikeDmg, description: `Lethal Shadow Strike: ${critStrikeDmg} critical damage`, icon: 'swords' };
+  },
+  CORROSION_DRAINER: (enemy, round) => {
+    if (round % 2 === 1) {
+      const acidDmg = Math.round(enemy.derivedStats.magicAttack * 1.2);
+      return { type: 'DEBUFF', damage: acidDmg, statusEffect: 'CORROSION', description: `Corrosive Bile Vomit: ${acidDmg} acid dmg + dissolves player Block`, icon: 'flask' };
+    }
+    const drainDmg = Math.round(enemy.derivedStats.magicAttack * 1.4);
+    return { type: 'HEAL', damage: drainDmg, heal: drainDmg, description: `Soul Life Drain: Deals ${drainDmg} Void dmg and restores ${drainDmg} HP`, icon: 'sparkles' };
+  },
+  SPELLWEAVER: (enemy) => {
+    if (enemy.name.includes('Frost') || enemy.name.includes('Ice')) {
+      const iceDmg = Math.round(enemy.derivedStats.magicAttack * 1.4);
+      return { type: 'DEBUFF', damage: iceDmg, statusEffect: 'FROZEN', description: `Glacial Ice Slam: ${iceDmg} Ice dmg + 1 turn Frozen`, icon: 'zap' };
+    }
+    const fireDmg = Math.round(enemy.derivedStats.magicAttack * 1.5);
+    return { type: 'DEBUFF', damage: fireDmg, statusEffect: 'BURNING', description: `Dark Fireball: ${fireDmg} Fire Magic dmg + Burning`, icon: 'flame' };
+  },
+  CASTER: (enemy) => INTENT_STRATEGIES['SPELLWEAVER']!(enemy, 0, 0, null as any),
+  AGGRESSIVE: (enemy) => {
+    const biteDmg = Math.round(enemy.derivedStats.physicalAttack * 1.3);
+    return { type: 'DEBUFF', damage: biteDmg, statusEffect: 'BLEEDING', description: `Feral Rend Bite: ${biteDmg} physical dmg + Bleeding`, icon: 'sword' };
+  }
+};
+
 /**
  * Calculates and telegraphs the upcoming enemy intent for the next round
  */
@@ -27,182 +96,13 @@ export function calculateEnemyIntent(
     };
   }
 
-  // 2. Healer Archetype (Goblin Shaman)
-  if (enemy.aiType === 'HEALER') {
-    if (hpRatio <= 0.6) {
-      return {
-        type: 'HEAL',
-        heal: Math.round(enemy.maxHp * 0.3),
-        description: 'Chanting Primal Healing Salve (+30% HP)',
-        icon: 'heart',
-      };
-    }
-    const lightningDmg = Math.round(enemy.derivedStats.magicAttack * 1.4);
-    return {
-      type: 'ATTACK',
-      damage: lightningDmg,
-      statusEffect: 'SHOCKED',
-      description: `Calling Lightning Bolt: ${lightningDmg} Lightning dmg + Shocked`,
-      icon: 'zap',
-    };
+  const strategy = INTENT_STRATEGIES[enemy.aiType];
+  if (strategy) {
+    const intent = strategy(enemy, round, hpRatio, rng);
+    if (intent) return intent;
   }
 
-  // 3. Enrager Archetype (Goblin Berserker)
-  if (enemy.aiType === 'ENRAGER') {
-    const isEmpowered = enemy.statusEffects.some((s) => s.type === 'EMPOWERED' && s.remainingTurns > 0);
-    if (hpRatio <= 0.65 && !isEmpowered) {
-      return {
-        type: 'BUFF',
-        description: 'Entering Blood Frenzy (+Empowered & Haste)',
-        icon: 'flame',
-      };
-    }
-    const frenzyDmg = Math.round(enemy.derivedStats.physicalAttack * (isEmpowered ? 1.6 : 1.25));
-    return {
-      type: 'ATTACK',
-      damage: Math.max(4, frenzyDmg),
-      description: `Wild Frenzy Cleave: ${frenzyDmg} heavy physical damage`,
-      icon: 'swords',
-    };
-  }
-
-  // 4. Pack Leader (Orc Warlord)
-  if (enemy.aiType === 'PACK_LEADER') {
-    if (round % 3 === 1) {
-      const shieldVal = 20;
-      return {
-        type: 'BUFF',
-        block: shieldVal,
-        description: `Bellowing Battle Cry: Grants +${shieldVal} Block & Empowered`,
-        icon: 'shield',
-      };
-    }
-    const cleaveDmg = Math.round(enemy.derivedStats.physicalAttack * 1.6);
-    return {
-      type: 'DEBUFF',
-      damage: cleaveDmg,
-      statusEffect: 'VULNERABLE',
-      description: `Crushing Cleave: ${cleaveDmg} physical dmg + Vulnerable (+30% dmg taken)`,
-      icon: 'swords',
-    };
-  }
-
-  // 5. Defender Fortress (Gargoyle Sentinel / Skeleton Guard)
-  if (enemy.aiType === 'DEFENDER_FORTRESS') {
-    if (enemy.shieldHp <= 0 || round % 2 === 1) {
-      const blockVal = Math.round(enemy.derivedStats.physicalDefense * 1.5) + 15;
-      return {
-        type: 'DEFEND',
-        block: blockVal,
-        description: `Hardening into Stone Form: +${blockVal} Block & Thorns`,
-        icon: 'shield',
-      };
-    }
-    const slamDmg = Math.round(enemy.derivedStats.physicalAttack * 1.5);
-    return {
-      type: 'ATTACK',
-      damage: slamDmg,
-      description: `Earthshaking Heavy Slam: ${slamDmg} physical damage`,
-      icon: 'sword',
-    };
-  }
-
-  // 6. Crowd Controller (Bandit Shadowblade / Crypt Banshee / Broodmother)
-  if (enemy.aiType === 'CROWD_CONTROLLER') {
-    if (round % 3 === 1) {
-      if (enemy.name.includes('Bandit') || enemy.name.includes('Shadow')) {
-        return {
-          type: 'DEBUFF',
-          statusEffect: 'BLINDED',
-          damage: 5,
-          description: 'Hurls Smoke Bomb: 5 dmg + Blinded (40% miss chance)',
-          icon: 'sparkles',
-        };
-      } else if (enemy.name.includes('Banshee') || enemy.name.includes('Specter')) {
-        return {
-          type: 'DEBUFF',
-          statusEffect: 'WEAKENED',
-          damage: 8,
-          description: 'Piercing Banshee Screech: 8 dmg + Weakened (-30% attack power)',
-          icon: 'shadow',
-        };
-      } else {
-        return {
-          type: 'DEBUFF',
-          statusEffect: 'POISON',
-          damage: 6,
-          description: 'Spitting Sticky Web: 6 dmg + 10 Poison + Weakened',
-          icon: 'poison',
-        };
-      }
-    }
-    const critStrikeDmg = Math.round(enemy.derivedStats.physicalAttack * 1.5);
-    return {
-      type: 'ATTACK',
-      damage: critStrikeDmg,
-      description: `Lethal Shadow Strike: ${critStrikeDmg} critical damage`,
-      icon: 'swords',
-    };
-  }
-
-  // 7. Corrosion & Drainer (Plague Abomination / Void Wraith)
-  if (enemy.aiType === 'CORROSION_DRAINER') {
-    if (round % 2 === 1) {
-      const acidDmg = Math.round(enemy.derivedStats.magicAttack * 1.2);
-      return {
-        type: 'DEBUFF',
-        damage: acidDmg,
-        statusEffect: 'CORROSION',
-        description: `Corrosive Bile Vomit: ${acidDmg} acid dmg + dissolves player Block`,
-        icon: 'flask',
-      };
-    }
-    const drainDmg = Math.round(enemy.derivedStats.magicAttack * 1.4);
-    return {
-      type: 'HEAL',
-      damage: drainDmg,
-      heal: drainDmg,
-      description: `Soul Life Drain: Deals ${drainDmg} Void dmg and restores ${drainDmg} HP`,
-      icon: 'sparkles',
-    };
-  }
-
-  // 8. Spellweaver (Frost Elemental / Cultist Evoker)
-  if (enemy.aiType === 'SPELLWEAVER' || enemy.aiType === 'CASTER') {
-    if (enemy.name.includes('Frost') || enemy.name.includes('Ice')) {
-      const iceDmg = Math.round(enemy.derivedStats.magicAttack * 1.4);
-      return {
-        type: 'DEBUFF',
-        damage: iceDmg,
-        statusEffect: 'FROZEN',
-        description: `Glacial Ice Slam: ${iceDmg} Ice dmg + 1 turn Frozen`,
-        icon: 'zap',
-      };
-    } else {
-      const fireDmg = Math.round(enemy.derivedStats.magicAttack * 1.5);
-      return {
-        type: 'DEBUFF',
-        damage: fireDmg,
-        statusEffect: 'BURNING',
-        description: `Dark Fireball: ${fireDmg} Fire Magic dmg + Burning`,
-        icon: 'flame',
-      };
-    }
-  }
-
-  // 9. Aggressive Beast (Dire Wolf)
-  if (enemy.aiType === 'AGGRESSIVE') {
-    const biteDmg = Math.round(enemy.derivedStats.physicalAttack * 1.3);
-    return {
-      type: 'DEBUFF',
-      damage: biteDmg,
-      statusEffect: 'BLEEDING',
-      description: `Feral Rend Bite: ${biteDmg} physical dmg + Bleeding`,
-      icon: 'sword',
-    };
-  }
-
-  // 10. Default Melee fallback
+  // Default Melee fallback
   const roll = rng.nextInt(1, 100);
   if (roll <= 60) {
     const rawDmg = Math.round(enemy.derivedStats.physicalAttack * rng.nextFloat(0.9, 1.15));

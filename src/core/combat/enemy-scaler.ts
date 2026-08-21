@@ -15,13 +15,13 @@ export function scaleEnemyForFloor(
   rng: IRandomNumberGenerator,
   stepNumber: number = 0
 ): { enemy: Combatant; affixes: string[] } {
-  // Compounding 2.0x HP scaling per floor depth, 1.8x ATK scaling, and stepped defense
-  const floorHpMultiplier = Math.pow(2.0, Math.max(0, floorNumber - 1));
-  const floorAtkMultiplier = Math.pow(1.8, Math.max(0, floorNumber - 1));
+  // Linear scaling: +75% HP and +50% ATK per floor depth
+  const floorHpMultiplier = 1.0 + Math.max(0, floorNumber - 1) * 0.75;
+  const floorAtkMultiplier = 1.0 + Math.max(0, floorNumber - 1) * 0.50;
   const floorDefMultiplier = 1.0 + Math.max(0, floorNumber - 1) * 0.55;
 
-  // Intra-floor step progression (+6% HP/ATK per step within the floor)
-  const stepMultiplier = 1.0 + Math.min(4, Math.max(0, stepNumber)) * 0.06;
+  // Intra-floor step progression (+4% HP/ATK per step within the floor)
+  const stepMultiplier = 1.0 + Math.min(4, Math.max(0, stepNumber)) * 0.04;
 
   const eliteHpMult = isElite ? 1.45 : 1.0;
   const eliteAtkMult = isElite ? 1.30 : 1.0;

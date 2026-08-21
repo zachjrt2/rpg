@@ -37,6 +37,8 @@ export function createInitialCombatState(
       abilityCooldowns: { ...(h.abilityCooldowns || {}) },
       statusEffects: [...(h.statusEffects || [])],
       shieldHp: h.shieldHp || 0,
+      posture: h.maxPosture || 0,
+      maxPosture: h.maxPosture || 0,
     };
   });
 
@@ -52,6 +54,8 @@ export function createInitialCombatState(
       abilityCooldowns: { ...(activeEnemy.abilityCooldowns || {}) },
       statusEffects: [...(activeEnemy.statusEffects || [])],
       shieldHp: activeEnemy.shieldHp || 0,
+      posture: activeEnemy.maxPosture || 0,
+      maxPosture: activeEnemy.maxPosture || 0,
     };
   }
 

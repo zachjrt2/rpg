@@ -5,6 +5,7 @@ export interface DamageOptions {
   bonusPowerMultiplier?: number;
   guaranteedHit?: boolean;
   guaranteedCrit?: boolean;
+  armorPenetration?: number; // 0.0 to 1.0
 }
 
 /**
@@ -27,6 +28,7 @@ export function calculatePhysicalDamage(
     bonusPowerMultiplier = 1.0,
     guaranteedHit = false,
     guaranteedCrit = false,
+    armorPenetration = 0.0,
   } = options;
 
   // Step 1: Accuracy & Evasion
@@ -35,7 +37,16 @@ export function calculatePhysicalDamage(
   const rawHitChance = attackerAcc - targetEva;
   const hitChance = Math.min(98, Math.max(15, rawHitChance));
   
-  const isHit = guaranteedHit || rng.rollChance(hitChance / 100);
+  const roll = rng.nextFloat(0, 1);
+  const threshold = hitChance / 100;
+  let isHit = guaranteedHit || roll <= threshold;
+  let isGlancingBlow = false;
+
+  // Glancing Blow: missed by up to 15%
+  if (!isHit && roll <= threshold + 0.15) {
+    isHit = true;
+    isGlancingBlow = true;
+  }
 
   if (!isHit) {
     return {
@@ -63,10 +74,15 @@ export function calculatePhysicalDamage(
   const variance = rng.nextFloat(0.92, 1.08);
   const rawDamage = baseAttack * critMult * variance;
 
-  // Step 5: Armor & Defense Mitigation
-  const def = Math.max(0, target.derivedStats.physicalDefense);
+  // Step 5: Armor & Defense Mitigation with Armor Penetration
+  const def = Math.max(0, target.derivedStats.physicalDefense * (1 - armorPenetration));
   const defenseReduction = def / (def + 60); // Asymptotic armor curve
   let mitigatedDamage = rawDamage * (1 - defenseReduction);
+
+  // Apply Glancing Blow reduction (50% less damage)
+  if (isGlancingBlow) {
+    mitigatedDamage *= 0.5;
+  }
 
   // Step 6: Defending Stance Reduction (50% less damage taken)
   const wasDefended = target.isDefending;
@@ -88,5 +104,6 @@ export function calculatePhysicalDamage(
     finalDamage,
     wasDefended,
     isKilled,
+    isGlancingBlow,
   };
 }

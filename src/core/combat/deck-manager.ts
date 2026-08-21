@@ -372,6 +372,26 @@ export function playCombatCard(
 
     let finalDamage = Math.max(1, totalDmg);
 
+    // Stagger / Posture system logic
+    if (nextTarget.posture !== undefined && nextTarget.posture > 0) {
+      // Deal posture damage (e.g. flat 10 per hit + 20% of damage)
+      const postureDmg = Math.round(10 + finalDamage * 0.2);
+      nextTarget.posture -= postureDmg;
+      if (nextTarget.posture <= 0) {
+        nextTarget.posture = 0;
+        floatingTexts.push(createFloatingText(nextTarget.id, 'STAGGERED!', 'crit'));
+        logs.push(createLogEntry({ round, actorName: hero.name, actionType: 'ABILITY', entryType: 'INFO', message: `💥 ${nextTarget.name}'s posture was broken! STAGGERED and takes massive damage!` }));
+        
+        // Stun the target
+        const stunApp = { effectId: 'STUNNED' as const, chance: 1.0, duration: 1 };
+        const stunRes = applyStatusEffect(nextTarget, stunApp, nextHero, rng);
+        if (stunRes.applied) nextTarget = stunRes.target;
+        
+        // Bonus damage for breaking stagger
+        finalDamage = Math.round(finalDamage * 1.5);
+      }
+    }
+
     // Target Shield Mitigation
     if (nextTarget.shieldHp > 0) {
       const absorbed = Math.min(nextTarget.shieldHp, finalDamage);

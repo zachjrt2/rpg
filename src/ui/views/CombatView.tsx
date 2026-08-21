@@ -107,9 +107,9 @@ import { DeckViewModal } from '../components/DeckViewModal.tsx';
 import { BattleVfxOverlay, type ActiveVfx, type BattleVfxType } from '../components/BattleVfxOverlay.tsx';
 import { TravelTransitionOverlay } from '../components/TravelTransitionOverlay.tsx';
 import { DungeonGroundTrack } from '../components/DungeonGroundTrack.tsx';
-import { getFloorName } from '../../core/dungeon/dungeon-generator.ts';
 import { upgradeCombatCard } from '../../core/combat/card-upgrader.ts';
 import { DungeonMapView } from './DungeonMapView.tsx';
+import { useModals } from '../hooks/useModals.ts';
 
 export const CombatView: React.FC = () => {
   const [rng] = useState(() => new Mulberry32RNG(Date.now()));
@@ -181,22 +181,22 @@ export const CombatView: React.FC = () => {
   const [victoryLoot, setVictoryLoot] = useState<EncounterLootResult | null>(null);
 
 
-  const [isClassSelectorOpen, setIsClassSelectorOpen] = useState<boolean>(false);
-  const [isShopOpen, setIsShopOpen] = useState<boolean>(false);
-  const [isLevelUpOpen, setIsLevelUpOpen] = useState<boolean>(false);
-  const [isSkillTreeOpen, setIsSkillTreeOpen] = useState<boolean>(false);
-  const [isCampfireOpen, setIsCampfireOpen] = useState<boolean>(false);
-  const [isShrineOpen, setIsShrineOpen] = useState<boolean>(false);
-  const [isTrainerOpen, setIsTrainerOpen] = useState<boolean>(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
-  const [isCodexOpen, setIsCodexOpen] = useState<boolean>(false);
-  const [isSanctumOpen, setIsSanctumOpen] = useState<boolean>(false);
-  const [isDeckViewOpen, setIsDeckViewOpen] = useState<boolean>(false);
-  const [isCombatLogOpen, setIsCombatLogOpen] = useState<boolean>(false);
-  const [isTutorialOpen, setIsTutorialOpen] = useState<boolean>(false);
-
-  // Character Creator Modal (Opens if no saved game or on New Game / Reset)
-  const [isCharacterCreatorOpen, setIsCharacterCreatorOpen] = useState<boolean>(() => !savedData.current);
+  const {
+    isClassSelectorOpen, setIsClassSelectorOpen,
+    isShopOpen, setIsShopOpen,
+    isLevelUpOpen, setIsLevelUpOpen,
+    isSkillTreeOpen, setIsSkillTreeOpen,
+    isCampfireOpen, setIsCampfireOpen,
+    isShrineOpen, setIsShrineOpen,
+    isTrainerOpen, setIsTrainerOpen,
+    isSettingsOpen, setIsSettingsOpen,
+    isCodexOpen, setIsCodexOpen,
+    isSanctumOpen, setIsSanctumOpen,
+    isDeckViewOpen, setIsDeckViewOpen,
+    isCombatLogOpen, setIsCombatLogOpen,
+    isTutorialOpen, setIsTutorialOpen,
+    isCharacterCreatorOpen, setIsCharacterCreatorOpen
+  } = useModals(!savedData.current);
   const [hitAnimatingId, setHitAnimatingId] = useState<string | null>(null);
 
   const [isEnemyTransitioning, setIsEnemyTransitioning] = useState<boolean>(false);
@@ -847,12 +847,20 @@ export const CombatView: React.FC = () => {
 
     if (node.type === 'SHRINE') {
       soundFx.playClick();
-      if (Math.random() < 0.5) {
-        const randomEvent = DUNGEON_EVENTS[Math.floor(Math.random() * DUNGEON_EVENTS.length)];
-        setActiveDungeonEvent(randomEvent);
-      } else {
-        setIsShrineOpen(true);
-      }
+      setIsShrineOpen(true);
+      return;
+    }
+
+    if (node.type === 'EVENT') {
+      soundFx.playClick();
+      const randomEvent = DUNGEON_EVENTS[Math.floor(Math.random() * DUNGEON_EVENTS.length)];
+      setActiveDungeonEvent(randomEvent);
+      return;
+    }
+
+    if (node.type === 'SHOP') {
+      soundFx.playClick();
+      setIsShopOpen(true);
       return;
     }
 
@@ -861,7 +869,7 @@ export const CombatView: React.FC = () => {
     setTravelTransition({
       active: true,
       destinationName: node.name,
-      floorTitle: `Floor ${dungeon.currentFloor}: ${getFloorName(dungeon.currentFloor)}`,
+      floorTitle: dungeon.floor.name,
       nodeId,
     });
   };

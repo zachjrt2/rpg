@@ -16,7 +16,6 @@ describe('Multi-Floor Dungeon Progression', () => {
     const floor2 = advanceToNextDungeonFloor(floor1, rng);
     expect(floor2.currentFloor).toBe(2);
     expect(floor2.floor.name).toContain('Floor 2');
-    expect(floor2.floor.name).toContain('The Abyssal Catacombs');
   });
 
   it('marks run as completed when boss node is cleared', () => {

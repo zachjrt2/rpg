@@ -1,4 +1,4 @@
-export type DungeonNodeType = 'BATTLE' | 'ELITE' | 'CAMPFIRE' | 'SHRINE' | 'BOSS';
+export type DungeonNodeType = 'BATTLE' | 'ELITE' | 'CAMPFIRE' | 'SHRINE' | 'BOSS' | 'EVENT' | 'SHOP';
 
 export interface DungeonNode {
   id: string;
